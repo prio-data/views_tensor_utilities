@@ -1,6 +1,5 @@
 import defaults
 import mappings
-import numpy as np
 import pandas as pd
 
 class ViewsDataframe():
