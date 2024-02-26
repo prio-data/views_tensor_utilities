@@ -1,6 +1,6 @@
-import defaults
-import mappings
 import pandas as pd
+from . import defaults
+from . import mappings
 
 class ViewsDataframe():
 
@@ -247,6 +247,7 @@ class ViewsTensorContainer():
         else:
             return None
 
+
 class ViewsNumpy():
 
     """
@@ -264,11 +265,13 @@ class ViewsNumpy():
 
     """
 
-    def __init__(self,tensor,columns,dne,missing):
+    def __init__(self, tensor, columns, dne, missing):
         self.tensor = tensor
         self.columns = columns
         self.dne = dne
         self.missing = missing
+        self.index = None
+
 
 class ViewsPytorch():
 

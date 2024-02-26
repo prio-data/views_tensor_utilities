@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-import defaults
+from . import defaults
+
 
 class TimeUnits():
 
@@ -20,7 +21,7 @@ class TimeUnits():
         self.time_to_index = time_to_index
 
     @classmethod
-    def from_pandas(cls,pandas_object):
+    def from_pandas(cls, pandas_object):
         if isinstance(pandas_object, pd.DataFrame):
             index = pandas_object.index
         elif isinstance(pandas_object, pd.MultiIndex):
@@ -85,6 +86,7 @@ class SpaceUnits():
         space_units = cls(spaces=spaces, space_to_index=space_to_index, index_to_space=index_to_space)
 
         return space_units
+
 
 class LonglatUnits():
     """
@@ -157,9 +159,9 @@ class LonglatUnits():
 
         # find smallest possible square grid with side 2^ncells which will fit the pgids
 
-        latmin = np.min(latitudes)
+#        latmin = np.min(latitudes)
         latmax = np.max(latitudes)
-        longmin = np.min(longitudes)
+#        longmin = np.min(longitudes)
         longmax = np.max(longitudes)
 
         maxsize = np.max((longrange, latrange))
@@ -194,12 +196,13 @@ class LonglatUnits():
                             longlat_to_pgid=longlat_to_pgid,
                             pgid_to_index=pgid_to_index,
                             index_to_pgid=index_to_pgid,
-                            longrange = longrange,
-                            latrange = latrange,
+                            longrange=longrange,
+                            latrange=latrange,
                             gridsize=gridsize,
                             power=power)
 
         return longlat_units
+
 
 class TimeSpaceIndices():
     """
@@ -212,7 +215,7 @@ class TimeSpaceIndices():
 
     """
 
-    def __init__(self,time_indices,space_indices,index_tuples,ntime,nspace,nrow):
+    def __init__(self, time_indices, space_indices, index_tuples, ntime, nspace, nrow):
         self.time_indices = time_indices
         self.space_indices = space_indices
         self.index_tuples = index_tuples
@@ -247,6 +250,7 @@ class TimeSpaceIndices():
 
         return time_space_indices
 
+
 def is_strideable(pandas_object):
 
     """
@@ -263,6 +267,7 @@ def is_strideable(pandas_object):
         return True
     else:
         return False
+
 
 def check_df_data_types(df):
     """
@@ -284,6 +289,7 @@ def check_df_data_types(df):
 
     return dtype
 
+
 def check_default_dtypes():
     """
     check_default_dtypes
@@ -296,6 +302,7 @@ def check_default_dtypes():
         raise RuntimeError(f'default dtype {defaults.float_type} not in allowed dtypes: {defaults.allowed_dtypes}')
     if defaults.string_type not in defaults.allowed_dtypes:
         raise RuntimeError(f'default dtype {defaults.string_type} not in allowed dtypes: {defaults.allowed_dtypes}')
+
 
 def get_dne(df):
     """
@@ -311,6 +318,7 @@ def get_dne(df):
     else:
         return defaults.sdne
 
+
 def get_missing(df):
     """
     get_missing
@@ -325,6 +333,7 @@ def get_missing(df):
     else:
         return defaults.smissing
 
+
 def get_dtype(df):
     """
     get_dtype
@@ -338,6 +347,7 @@ def get_dtype(df):
         return defaults.float_type
     else:
         return defaults.string_type
+
 
 def df_to_numpy_time_space_strided(df):
 
@@ -380,6 +390,7 @@ def df_to_numpy_time_space_strided(df):
 
     return tensor_time_space.astype(dtype)
 
+
 def df_to_numpy_time_space_unstrided(df):
     """
     df_to_numpy_time_space_unstrided
@@ -397,19 +408,20 @@ def df_to_numpy_time_space_unstrided(df):
     nfeature = len(df.columns)
 
     if df[df == defaults.sdne].sum().sum() > 0:
-            raise RuntimeError(f'Default does-not-exist token {dne} found in input data')
+        raise RuntimeError(f'Default does-not-exist token {dne} found in input data')
 
     tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne, dtype=dtype)
 
     for irow in range(time_space.nrow):
-            idx = time_space.index_tuples[irow]
-            itime = time_space.time_indices.index(idx[0])
-            ispace = time_space.space_indices.index(idx[1])
-            tensor_time_space[itime, ispace, :] = df.values[irow]
+        idx = time_space.index_tuples[irow]
+        itime = time_space.time_indices.index(idx[0])
+        ispace = time_space.space_indices.index(idx[1])
+        tensor_time_space[itime, ispace, :] = df.values[irow]
 
     return tensor_time_space
 
-def numpy_time_space_to_longlat(tensor_time_space,pandas_object):
+
+def numpy_time_space_to_longlat(tensor_time_space, pandas_object):
     """
     numpy time_space_to_longlat
 
@@ -427,11 +439,11 @@ def numpy_time_space_to_longlat(tensor_time_space,pandas_object):
     # convert 3d tensor into longitude x latitude x time x feature tensor
 
     tensor_longlat = np.full((longlat_units.gridsize,
-                                     longlat_units.gridsize,
-                                     len(time_units.times),
-                                     tensor_time_space.shape[-1]),
-                                     dne,
-                                     dtype=dtype)
+                             longlat_units.gridsize,
+                             len(time_units.times),
+                             tensor_time_space.shape[-1]),
+                             dne,
+                             dtype=dtype)
 
     for pgid in longlat_units.pgids:
 
@@ -445,7 +457,8 @@ def numpy_time_space_to_longlat(tensor_time_space,pandas_object):
 
     return tensor_longlat
 
-def time_space_to_panel_unstrided(tensor,index,columns):
+
+def time_space_to_panel_unstrided(tensor, index, columns):
 
     """
     time_space_to_panel_unstrided
@@ -461,17 +474,18 @@ def time_space_to_panel_unstrided(tensor,index,columns):
 
     nfeature = tensor.shape[-1]
 
-    data=np.full((time_space.nrow,nfeature),dne)
+    data = np.full((time_space.nrow, nfeature), dne)
 
     for irow, row in enumerate(time_space.index_tuples):
         idx = time_space.index_tuples[irow]
         itime = time_space.time_indices.index(idx[0])
         ispace = time_space.space_indices.index(idx[1])
-        data[irow,:] = tensor[itime,ispace,:]
+        data[irow, :] = tensor[itime, ispace, :]
 
-    return pd.DataFrame(data=data,index=index,columns=columns)
+    return pd.DataFrame(data=data, index=index, columns=columns)
 
-def time_space_to_panel_strided(tensor,index,columns):
+
+def time_space_to_panel_strided(tensor, index, columns):
     """
     time_space_to_panel_strided
 
