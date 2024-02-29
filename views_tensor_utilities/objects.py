@@ -2,6 +2,7 @@ import pandas as pd
 from . import defaults
 from . import mappings
 
+
 class ViewsDataframe():
 
     """
@@ -45,7 +46,7 @@ class ViewsDataframe():
 
     """
 
-    def __init__(self,df):
+    def __init__(self, df):
         self.df = df
         self.index = df.index
         self.split_dfs = []
@@ -54,7 +55,6 @@ class ViewsDataframe():
             self.transformer = mappings.df_to_numpy_time_space_strided
         else:
             self.transformer = mappings.df_to_numpy_time_space_unstrided
-
 
     def __split_by_dtype(self):
 
@@ -95,28 +95,18 @@ class ViewsDataframe():
 
         for split_df in self.split_dfs:
 
-            if len(split_df.columns)>0:
-
-#                dtypes_set = set(split_df.dtypes)
-
-#                if len(dtypes_set) != 1:
-#                    raise RuntimeError(f'df with multiple dypes passed: {split_df.dtypes}')
-
-#                dtype = list(dtypes_set)[0]
-
-#                dne = defaults.fdne if dtype in defaults.allowed_float_types else defaults.sdne
-#                missing = defaults.fmissing if dtype in defaults.allowed_float_types else defaults.smissing
+            if len(split_df.columns) > 0:
 
                 dne = mappings.get_dne(split_df)
                 missing = mappings.get_missing(split_df)
 
                 tensor_time_space = self.transformer(split_df)
 
-                vnt = ViewsNumpy(tensor_time_space,split_df.columns,dne,missing)
+                vnt = ViewsNumpy(tensor_time_space, split_df.columns, dne, missing)
 
                 tensors.append(vnt)
 
-        return ViewsTensorContainer(tensors,self.index)
+        return ViewsTensorContainer(tensors, self.index)
 
     def to_numpy_longlat(self):
 
@@ -155,6 +145,7 @@ class ViewsDataframe():
     def to_pytorch_lat_long_time(self):
         pass
 
+
 class ViewsTensorContainer():
 
     """
@@ -176,7 +167,7 @@ class ViewsTensorContainer():
 
     """
 
-    def __init__(self,tensors,index):
+    def __init__(self, tensors, index):
         self.ViewsTensors = tensors
         self.index = index
 
@@ -190,7 +181,7 @@ class ViewsTensorContainer():
         """
         to_pandas
 
-        Call space_time_to_panel if wrapped tensors are 3D, throws and error otherwise
+        Call space_time_to_panel if wrapped tensors are 3D, throws an error otherwise
 
 
         """
@@ -214,9 +205,9 @@ class ViewsTensorContainer():
 
         split_dfs = []
         for views_tensor in self.ViewsTensors:
-            split_dfs.append(self.transformer(views_tensor.tensor,self.index,views_tensor.columns))
+            split_dfs.append(self.transformer(views_tensor.tensor, self.index, views_tensor.columns))
 
-        return pd.concat(split_dfs,axis=1)
+        return pd.concat(split_dfs, axis=1)
 
     def get_numeric_tensor(self):
         """
@@ -228,7 +219,7 @@ class ViewsTensorContainer():
 
         for views_tensor in self.ViewsTensors:
             tensor = views_tensor.tensor
-            if tensor.dtype in [defaults.float_type,]:
+            if tensor.dtype in [defaults.float_type, ]:
                 return tensor
         else:
             return None
