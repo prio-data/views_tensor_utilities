@@ -316,7 +316,7 @@ def __check_cast_to_dtypes(dtype):
         raise RuntimeError(f'requested dtype {dtype} not in allowed dtypes: {defaults.allowed_dtypes}')
 
 
-def __get_dne(df):
+def get_dne(df):
     """
     get_dne
 
@@ -331,7 +331,7 @@ def __get_dne(df):
         return defaults.sdne
 
 
-def __get_missing(df):
+def get_missing(df):
     """
     get_missing
 

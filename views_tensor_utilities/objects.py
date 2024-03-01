@@ -98,8 +98,8 @@ class ViewsDataframe():
 
             if len(split_df.columns) > 0:
 
-                dne = mappings.__get_dne(split_df)
-                missing = mappings.__get_missing(split_df)
+                dne = mappings.get_dne(split_df)
+                missing = mappings.get_missing(split_df)
 
                 tensor_time_space = self.transformer(split_df, self.cast_to_dtype)
 
