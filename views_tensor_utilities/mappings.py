@@ -269,7 +269,7 @@ def is_strideable(pandas_object):
         return False
 
 
-def check_df_data_types(df):
+def __check_df_data_types(df):
     """
     check_df_data_types
 
@@ -290,7 +290,7 @@ def check_df_data_types(df):
     return dtype
 
 
-def check_default_dtypes():
+def __check_default_dtypes():
     """
     check_default_dtypes
 
@@ -304,14 +304,26 @@ def check_default_dtypes():
         raise RuntimeError(f'default dtype {defaults.string_type} not in allowed dtypes: {defaults.allowed_dtypes}')
 
 
-def get_dne(df):
+def __check_cast_to_dtypes(dtype):
+    """
+    check_cast_to_dtypes
+
+    Check that the requested datatypes can be handled by the rest of the package
+
+    """
+
+    if dtype not in defaults.allowed_dtypes:
+        raise RuntimeError(f'requested dtype {dtype} not in allowed dtypes: {defaults.allowed_dtypes}')
+
+
+def __get_dne(df):
     """
     get_dne
 
     Obtain correct does-not-exist token based on data type of input dataframe
     """
 
-    dtype = check_df_data_types(df)
+    dtype = __check_df_data_types(df)
 
     if dtype in defaults.allowed_float_types:
         return defaults.fdne
@@ -319,14 +331,14 @@ def get_dne(df):
         return defaults.sdne
 
 
-def get_missing(df):
+def __get_missing(df):
     """
     get_missing
 
     Obtain correct missing token based on data type of input dataframe
     """
 
-    dtype = check_df_data_types(df)
+    dtype = __check_df_data_types(df)
 
     if dtype in defaults.allowed_float_types:
         return defaults.fmissing
@@ -334,22 +346,22 @@ def get_missing(df):
         return defaults.smissing
 
 
-def get_dtype(df):
+def __get_dtype(df):
     """
     get_dtype
 
     Obtain correct output datatype based on data type of input dataframe
     """
 
-    dtype = check_df_data_types(df)
-    check_default_dtypes()
+    dtype = __check_df_data_types(df)
+    __check_default_dtypes()
     if dtype in defaults.allowed_float_types:
         return defaults.float_type
     else:
         return defaults.string_type
 
 
-def df_to_numpy_time_space_strided(df):
+def df_to_numpy_time_space_strided(df, cast_to_dtype=None):
 
     """
     df_to_numpy_time_space_strided
@@ -358,7 +370,11 @@ def df_to_numpy_time_space_strided(df):
 
     """
 
-    dtype = get_dtype(df)
+    if cast_to_dtype is None:
+        dtype = __get_dtype(df)
+    else:
+        __check_cast_to_dtypes(cast_to_dtype)
+        dtype = cast_to_dtype
 
     # get shape of dataframe
 
@@ -391,7 +407,7 @@ def df_to_numpy_time_space_strided(df):
     return tensor_time_space.astype(dtype)
 
 
-def df_to_numpy_time_space_unstrided(df):
+def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None):
     """
     df_to_numpy_time_space_unstrided
 
@@ -400,8 +416,13 @@ def df_to_numpy_time_space_unstrided(df):
 
     """
 
-    dne = get_dne(df)
-    dtype = get_dtype(df)
+    dne = __get_dne(df)
+    
+    if cast_to_dtype is None:
+        dtype = __get_dtype(df)
+    else:
+        __check_cast_to_dtypes(cast_to_dtype)
+        dtype = cast_to_dtype
 
     time_space = TimeSpaceIndices.from_pandas(df)
 
