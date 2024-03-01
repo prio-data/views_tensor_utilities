@@ -416,7 +416,7 @@ def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None):
 
     """
 
-    dne = __get_dne(df)
+    dne = get_dne(df)
 
     if cast_to_dtype is None:
         dtype = __get_dtype(df)
