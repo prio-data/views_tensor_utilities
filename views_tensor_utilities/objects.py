@@ -103,9 +103,14 @@ class ViewsDataframe():
                 dne = mappings.get_dne(split_df)
                 missing = mappings.get_missing(split_df)
 
-                tensor_time_space = self.transformer(split_df, self.cast_to_dtype, self.override_dne,
-                                                     self.override_missing)
+                try:
 
+                    tensor_time_space = self.transformer(split_df, self.cast_to_dtype, self.override_dne,
+                                                     self.override_missing)
+                except:
+
+                    tensor_time_space = self.transformer(split_df)
+                    
                 vnt = ViewsNumpy(tensor_time_space, split_df.columns, dne, missing)
 
                 tensors.append(vnt)
