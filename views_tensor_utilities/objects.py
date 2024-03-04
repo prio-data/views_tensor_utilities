@@ -106,11 +106,11 @@ class ViewsDataframe():
                 try:
 
                     tensor_time_space = self.transformer(split_df, self.cast_to_dtype, self.override_dne,
-                                                     self.override_missing)
+                                                         self.override_missing)
                 except:
 
                     tensor_time_space = self.transformer(split_df)
-                    
+
                 vnt = ViewsNumpy(tensor_time_space, split_df.columns, dne, missing)
 
                 tensors.append(vnt)

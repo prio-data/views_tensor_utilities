@@ -27,7 +27,8 @@ VIEWS tensors come in two forms. For the purposes of regression models, 3-dimens
 dimensions being (time-unit, space-unit, feature). For neural-net-based models and visualisation, 4-dimensional 
 tensors with dimensions (longitude-unit, latitude-unit, time-unit, feature) are used.
 
-Tensor indices are contiguous sets of integers starting from 0.
+Tensor indices are contiguous sets of integers starting from 0. Non-existent units of analysis cannot be omitted
+from tensors.
 
 Ordinary Numpy arrays cannot be used to store mixed numeric and string data.
 
@@ -36,7 +37,7 @@ Ordinary Numpy arrays do not store names for their axes or axis values.
 ## Representing VIEWS dataframes as tensors
 
 The _views_tensor_utilities_ package represents dataframes by wrappers around pure numpy arrays, accompanied by 
-minimal metadata to capture essential information from the dataframe which cannot be stores in these arrays, 
+minimal metadata to capture essential information from the dataframe which cannot be stored in these arrays, 
 such that it is possible to reconstruct the original dataframe (possibly with some reordering of the columns). 
 Each ViewsNumpy object holds a tensor containing **only** numerical data or **only** string data, the column 
 names from the original dataframe corresponding to the data stored in the tensor, and the values of the tokens 
@@ -101,8 +102,58 @@ The command
 ```
 tensor_container=views_dataframe.to_numpy_time_space()
 ```
-generates a tensor container containing one of more ViewsNumpy objects wrapping the numeric and/or string
-portions of the dataframe's data. These can be accessed by 
+generates a tensor container containing one or more ViewsNumpy objects wrapping the numeric and/or string
+portions of the dataframe's data. 
+
+## Data types
+
+The _views_tensor_utilities_ package currently supports to data types: 'numeric' (all floating and integer types) 
+and 'object' (in practice, string types).
+
+All numeric data is cast to a single (float) numeric type, defined by defaults.float_type, and all string data is cast 
+to defaults.string_type.
+
+The default numeric type can be overridden when instantiating the ViewsDataframe class using the 'cast_to_dtype'
+keyword in the call to the constructor, e.g.
+```
+views_dataframe = objects.ViewsDataframe(df, cast_to_dtype=np.float64)
+```
+
+This will build numeric tensors with the requested dtype, but will have no effect on string tensors.
+
+## Missingness token
+
+The default missingness tokens are defined by defaults.fmissing (for numerical data, set to np.nan) and 
+defaults.smissing (for string data, set to 'null').
+
+The default missingness token for numerical data can be overridden when instantiating the ViewsDataframe class 
+using the 'override_missing' keyword in the call to the constructor, e.g.
+```
+views_dataframe = objects.ViewsDataframe(df, override_missing=-1e20)
+```
+This has no effect on string data.
+
+This functionality was included for reasons of flexibility but **its use is STRONGLY DISCOURAGED**, particularly in
+the context of the views_data_service. In particular **many of the transforms in the views-transformation-library 
+will cease to work correctly if the missingness token is anything other than np.nan**.
+
+## Does-not-exist token
+
+Some VIEWS units of analysis, e.g. country-month, have values that do not exist, e.g. the Soviet Union in January 
+2024 . Such units of analysis cannot be omitted from tensors. They also must not be confused with units of analysis
+which do exist but have no data, which are marked with the missingness token. These units of analysis are marked
+with a 'does-not-exist' token, defined for numeric and string data by defaults.fdne and defaults.sdne.
+
+The default does-not-exist token for numerical data can be overridden when instantiating the ViewsDataframe class 
+using the 'override_dne' keyword in the call to the constructor, e.g.
+```
+views_dataframe = objects.ViewsDataframe(df, override_dne=-1e20)
+```
+This has no effect on string data.
+
+## Accessing the tensors in a ViewsTensorContainer
+
+The tensors wrapped in a container can be accessed by 
 ```
 tensor=tensor_container.ViewsTensors[0].tensor
 ```
