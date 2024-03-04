@@ -431,10 +431,7 @@ def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None, override_dne=None, 
     if override_dne is None:
         dne = get_dne(df)
     else:
-        if override_dne.dtype is not dtype:
-            raise RuntimeError(f'dtype of override_dne {override_dne.dtype} does not match that of df: {dtype}')
-        else:
-            dne = override_dne
+        dne = override_dne
 
     time_space = TimeSpaceIndices.from_pandas(df)
 
@@ -470,10 +467,7 @@ def numpy_time_space_to_longlat(tensor_time_space, pandas_object, override_dne=N
     if override_dne is None:
         dne = defaults.fdne if dtype in defaults.allowed_float_types else defaults.sdne
     else:
-        if override_dne.dtype is not dtype:
-            raise RuntimeError(f'dtype of override_dne {override_dne.dtype} does not match that of df: {dtype}')
-        else:
-            dne = override_dne
+        dne = override_dne
 
     time_units = TimeUnits.from_pandas(pandas_object)
     longlat_units = LonglatUnits.from_pandas(pandas_object)
