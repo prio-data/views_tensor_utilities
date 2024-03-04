@@ -81,7 +81,7 @@ class ViewsDataframe():
 
         self.df = None
 
-    def to_numpy_time_space(self):
+    def to_numpy_time_space(self, broadcast_index=False):
         """
         to_numpy_time_space
 
@@ -112,6 +112,9 @@ class ViewsDataframe():
                     tensor_time_space = self.transformer(split_df)
 
                 vnt = ViewsNumpy(tensor_time_space, split_df.columns, dne, missing)
+
+                if broadcast_index:
+                    vnt.index = split_df.index
 
                 tensors.append(vnt)
 
