@@ -46,11 +46,13 @@ class ViewsDataframe():
 
     """
 
-    def __init__(self, df, cast_to_dtype=None):
+    def __init__(self, df, cast_to_dtype=None, override_dne=None, override_missing=None):
         self.df = df
         self.index = df.index
         self.split_dfs = []
         self.cast_to_dtype = cast_to_dtype
+        self.override_dne = override_dne
+        self.override_missing = override_missing
 
         if mappings.is_strideable(self.index):
             self.transformer = mappings.df_to_numpy_time_space_strided
@@ -101,7 +103,8 @@ class ViewsDataframe():
                 dne = mappings.get_dne(split_df)
                 missing = mappings.get_missing(split_df)
 
-                tensor_time_space = self.transformer(split_df, self.cast_to_dtype)
+                tensor_time_space = self.transformer(split_df, self.cast_to_dtype, self.override_dne,
+                                                     self.override_missing)
 
                 vnt = ViewsNumpy(tensor_time_space, split_df.columns, dne, missing)
 
