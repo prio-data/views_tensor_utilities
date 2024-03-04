@@ -361,7 +361,7 @@ def __get_dtype(df):
         return defaults.string_type
 
 
-def df_to_numpy_time_space_strided(df, cast_to_dtype=None):
+def df_to_numpy_time_space_strided(df, cast_to_dtype=None, override_dne=None, override_missing=None):
 
     """
     df_to_numpy_time_space_strided
@@ -375,6 +375,9 @@ def df_to_numpy_time_space_strided(df, cast_to_dtype=None):
     else:
         __check_cast_to_dtypes(cast_to_dtype)
         dtype = cast_to_dtype
+
+    if override_dne is not None:
+        raise RuntimeError(f'no dne tokens to override in strideable dataframe')
 
     # get shape of dataframe
 
@@ -404,10 +407,13 @@ def df_to_numpy_time_space_strided(df, cast_to_dtype=None):
     tensor_time_space = np.lib.stride_tricks.as_strided(flat, shape=(dim0, dim1, dim2),
                                                         strides=(offset0, offset1, offset2))
 
+    if override_missing is not None:
+        tensor_time_space = np.where(np.isnan(tensor_time_space), override_missing, tensor_time_space)
+
     return tensor_time_space.astype(dtype)
 
 
-def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None):
+def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None, override_dne=None, override_missing=None):
     """
     df_to_numpy_time_space_unstrided
 
@@ -416,20 +422,26 @@ def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None):
 
     """
 
-    dne = get_dne(df)
-
     if cast_to_dtype is None:
         dtype = __get_dtype(df)
     else:
         __check_cast_to_dtypes(cast_to_dtype)
         dtype = cast_to_dtype
 
+    if override_dne is None:
+        dne = get_dne(df)
+    else:
+        if override_dne.dtype is not dtype:
+            raise RuntimeError(f'dtype of override_dne {override_dne.dtype} does not match that of df: {dtype}')
+        else:
+            dne = override_dne
+
     time_space = TimeSpaceIndices.from_pandas(df)
 
     nfeature = len(df.columns)
 
-    if df[df == defaults.sdne].sum().sum() > 0:
-        raise RuntimeError(f'Default does-not-exist token {dne} found in input data')
+    if df[df == dne].sum().sum() > 0:
+        raise RuntimeError(f'does-not-exist token {dne} found in input data')
 
     tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne, dtype=dtype)
 
@@ -439,10 +451,13 @@ def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None):
         ispace = time_space.space_indices.index(idx[1])
         tensor_time_space[itime, ispace, :] = df.values[irow]
 
+    if override_missing is not None:
+        tensor_time_space = np.where(np.isnan(tensor_time_space), override_missing, tensor_time_space)
+
     return tensor_time_space
 
 
-def numpy_time_space_to_longlat(tensor_time_space, pandas_object):
+def numpy_time_space_to_longlat(tensor_time_space, pandas_object, override_dne=None, override_missing=None):
     """
     numpy time_space_to_longlat
 
@@ -452,7 +467,13 @@ def numpy_time_space_to_longlat(tensor_time_space, pandas_object):
 
     dtype = tensor_time_space.dtype
 
-    dne = defaults.fdne if dtype in defaults.allowed_float_types else defaults.sdne
+    if override_dne is None:
+        dne = defaults.fdne if dtype in defaults.allowed_float_types else defaults.sdne
+    else:
+        if override_dne.dtype is not dtype:
+            raise RuntimeError(f'dtype of override_dne {override_dne.dtype} does not match that of df: {dtype}')
+        else:
+            dne = override_dne
 
     time_units = TimeUnits.from_pandas(pandas_object)
     longlat_units = LonglatUnits.from_pandas(pandas_object)
@@ -475,6 +496,9 @@ def numpy_time_space_to_longlat(tensor_time_space, pandas_object):
             ilat = longlat_units.pgid_to_longlat[pgid][1]
 
             tensor_longlat[ilong, ilat, tindex, :] = tensor_time_space[tindex, pgindex, :]
+
+    if override_missing is not None:
+        tensor_longlat = np.where(np.isnan(tensor_longlat), override_missing, tensor_time_space)
 
     return tensor_longlat
 
