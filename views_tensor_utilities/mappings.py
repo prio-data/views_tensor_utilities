@@ -332,7 +332,8 @@ def get_dne(df):
         max_str_length = -1
         for column in df.columns:
             if df[column].dtype in defaults.allowed_string_types:
-                max_str_length = np.max([max_str_length,len(max(df[column].values, key=len))])
+                max_str_length = np.max([max_str_length, len(max(df[column].values, key=len))])
+
         return max_str_length*defaults.sdne
 
 
@@ -445,7 +446,10 @@ def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None, override_dne=None, 
     if df[df == dne].sum().sum() > 0:
         raise RuntimeError(f'does-not-exist token {dne} found in input data')
 
-    tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne, dtype=dtype)
+    if dtype in defaults.allowed_float_types:
+        tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne, dtype=dtype)
+    else:
+        tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne)
 
     for irow in range(time_space.nrow):
         idx = time_space.index_tuples[irow]
