@@ -329,7 +329,11 @@ def get_dne(df):
     if dtype in defaults.allowed_float_types:
         return defaults.fdne
     else:
-        return defaults.sdne
+        max_str_length = -1
+        for column in df.columns:
+            if df[column].dtype in defaults.allowed_string_types:
+                max_str_length = np.max([max_str_length,len(max(df[column].values, key=len))])
+        return max_str_length*defaults.sdne
 
 
 def get_missing(df):
