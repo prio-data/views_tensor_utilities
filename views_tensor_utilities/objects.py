@@ -207,7 +207,7 @@ class ViewsTensorContainer():
             group_missing = None
             for vt in list_of_views_tensors:
                 if vt.tensor.dtype == dtype:
-                    tensor_group.append(vt.tensor)
+                    tensor_group.append(vt.tensor.reshape(vt.tensor.shape[0], vt.tensor.shape[1]))
                     group_columns.append(vt.columns)
                     group_dne = vt.dne
                     group_missing = vt.missing
