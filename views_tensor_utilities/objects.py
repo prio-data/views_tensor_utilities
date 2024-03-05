@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from . import defaults
 from . import mappings
 
@@ -187,6 +188,36 @@ class ViewsTensorContainer():
             self.transformer = mappings.time_space_to_panel_strided
         else:
             self.transformer = mappings.time_space_to_panel_unstrided
+
+    @classmethod
+    def from_views_numpy_list(cls, list_of_views_tensors):
+
+        index = list_of_views_tensors[0].index
+
+        dtype_list = [vt.tensor.dtype for vt in list_of_views_tensors]
+
+        dtype_set = set(dtype_list)
+
+        merged_views_tensors = []
+
+        for dtype in dtype_set:
+            tensor_group = []
+            group_columns = []
+            group_dne = None
+            group_missing = None
+            for vt in list_of_views_tensors:
+                if vt.tensor.dtype == dtype:
+                    tensor_group.append(vt.tensor)
+                    group_columns.append(vt.columns)
+                    group_dne = vt.dne
+                    group_missing = vt.missing
+
+            merged_tensor = np.stack(tensor_group, axis=2)
+            merged_views_tensors.append(ViewsNumpy(merged_tensor, group_columns, group_dne, group_missing))
+
+        tensor_container = cls(tensors=merged_views_tensors, index=index)
+
+        return tensor_container
 
     def to_pandas(self):
 

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from . import defaults
+from . import objects
 
 
 class TimeUnits():
@@ -545,3 +546,48 @@ def time_space_to_panel_strided(tensor, index, columns):
                                            strides=(offset1, offset2))
 
     return pd.DataFrame(flat, index=index, columns=columns)
+
+
+def merge_numpy_tensors_to_tensor(list_of_numpy_tensors):
+
+    dtype_list = [tensor.dtype for tensor in list_of_numpy_tensors]
+
+    dtype_set = set(dtype_list)
+
+    merged_tensors = []
+
+    for dtype in dtype_set:
+        tensor_group = [tensor for tensor in list_of_numpy_tensors if tensor.dtype == dtype]
+        merged_tensors.append(np.stack(tensor_group, axis=2))
+
+    return merged_tensors
+
+
+def merge_views_tensors_to_tensor_container(list_of_views_tensors):
+
+    index = list_of_views_tensors[0].index
+
+    dtype_list = [vt.tensor.dtype for vt in list_of_views_tensors]
+
+    dtype_set = set(dtype_list)
+
+    merged_views_tensors = []
+
+    for dtype in dtype_set:
+        tensor_group = []
+        group_columns = []
+        group_dne = None
+        group_missing = None
+        for vt in list_of_views_tensors:
+            if vt.tensor.dtype == dtype:
+                tensor_group.append(vt.tensor)
+                group_columns.append(vt.columns)
+                group_dne = vt.dne
+                group_missing = vt.missing
+
+        merged_tensor = np.stack(tensor_group, axis=2)
+        merged_views_tensors.append(objects.ViewsNumpy(merged_tensor, group_columns, group_dne, group_missing))
+
+    tensor_container = objects.ViewsTensorContainer(merged_views_tensors, index)
+
+    return tensor_container
