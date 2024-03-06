@@ -104,23 +104,18 @@ class ViewsDataframe():
                 dne = mappings.get_dne(split_df)
                 missing = mappings.get_missing(split_df)
 
-#                try:
+                try:
 
-#                    tensor_time_space = self.transformer(split_df, self.cast_to_dtype, self.override_dne,
-#                                                         self.override_missing)
-#                except:
+                    tensor_time_space = self.transformer(split_df, self.cast_to_dtype, self.override_dne,
+                                                         self.override_missing)
+                except:
 
-#                    tensor_time_space = self.transformer(split_df)
-
-                tensor_time_space = self.transformer(split_df)
+                    tensor_time_space = self.transformer(split_df)
 
                 vnt = ViewsNumpy(tensor_time_space, split_df.columns, dne, missing)
 
                 if broadcast_index:
                     vnt.index = split_df.index
-
-                print('vnt',len(max(vnt.tensor, key=len)))
-                print(vnt.tensor.dtype)
 
                 tensors.append(vnt)
 
@@ -212,12 +207,12 @@ class ViewsTensorContainer():
             group_missing = None
             for vt in list_of_views_tensors:
                 if vt.tensor.dtype == dtype:
-                    tensor_group.append(vt.tensor.reshape(vt.tensor.shape[0], vt.tensor.shape[1]))
+                    tensor_group.append(vt.tensor)
                     group_columns.append(vt.columns)
                     group_dne = vt.dne
                     group_missing = vt.missing
 
-            merged_tensor = np.stack(tensor_group, axis=2)
+            merged_tensor = np.concatenate(tensor_group, axis=2)
             merged_views_tensors.append(ViewsNumpy(merged_tensor, group_columns, group_dne, group_missing))
 
         tensor_container = cls(tensors=merged_views_tensors, index=index)

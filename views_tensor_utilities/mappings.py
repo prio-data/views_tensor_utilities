@@ -571,7 +571,7 @@ def merge_numpy_tensors_to_tensor(list_of_numpy_tensors):
     return merged_tensors
 
 
-def merge_views_tensors_to_tensor_container(list_of_views_tensors):
+def merge_views_tensors_to_views_tensor(list_of_views_tensors):
 
     index = list_of_views_tensors[0].index
 
@@ -579,23 +579,20 @@ def merge_views_tensors_to_tensor_container(list_of_views_tensors):
 
     dtype_set = set(dtype_list)
 
-    merged_views_tensors = []
+    if len(dtype_set) != 1:
+        raise RuntimeError(f'cannot merge tensors with different dtypes: {dtype_set}')
 
-    for dtype in dtype_set:
-        tensor_group = []
-        group_columns = []
-        group_dne = None
-        group_missing = None
-        for vt in list_of_views_tensors:
-            if vt.tensor.dtype == dtype:
-                tensor_group.append(vt.tensor)
-                group_columns.append(vt.columns)
-                group_dne = vt.dne
-                group_missing = vt.missing
+    merged_columns = []
+    merged_dne = None
+    merged_missing = None
+    for vt in list_of_views_tensors:
+        merged_columns += vt.columns
+        merged_dne = vt.dne
+        merged_missing = vt.missing
 
-        merged_tensor = np.stack(tensor_group, axis=2)
-        merged_views_tensors.append(objects.ViewsNumpy(merged_tensor, group_columns, group_dne, group_missing))
+    merged_tensor = np.concatenate([vt.tensor for vt in list_of_views_tensors], axis=2)
 
-    tensor_container = objects.ViewsTensorContainer(merged_views_tensors, index)
+    views_tensor = objects.ViewsNumpy(merged_tensor, merged_columns, merged_dne, merged_missing)
+    views_tensor.index = index
 
-    return tensor_container
+    return views_tensor
