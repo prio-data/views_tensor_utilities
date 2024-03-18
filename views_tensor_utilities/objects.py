@@ -252,6 +252,21 @@ class ViewsTensorContainer():
 
         return pd.concat(split_dfs, axis=1)
 
+    def get_numeric_part(self):
+        """
+        get_numeric_part
+
+        Get and return the numeric part of the container, if it exists
+
+        """
+
+        for views_tensor in self.ViewsTensors:
+            tensor = views_tensor.tensor
+            if tensor.dtype in [defaults.float_type, ]:
+                return views_tensor
+        else:
+            return None
+
     def get_numeric_tensor(self):
         """
         get_numeric_tensor
@@ -264,6 +279,20 @@ class ViewsTensorContainer():
             tensor = views_tensor.tensor
             if tensor.dtype in [defaults.float_type, ]:
                 return tensor
+        else:
+            return None
+
+    def get_string_part(self):
+        """
+        get_string_part
+
+        Get and return the string part of the container, if it exists
+
+        """
+        for views_tensor in self.ViewsTensors:
+            tensor = views_tensor.tensor
+            if tensor.dtype in ['str', 'object']:
+                return views_tensor
         else:
             return None
 
