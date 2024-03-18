@@ -82,7 +82,7 @@ class SpaceUnits():
 
         for i, space_id in enumerate(spaces):
             space_to_index[space_id] = i
-            index_to_space[i] = spaces
+            index_to_space[i] = space_id
 
         space_units = cls(spaces=spaces, space_to_index=space_to_index, index_to_space=index_to_space)
 
