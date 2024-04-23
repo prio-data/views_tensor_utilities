@@ -262,7 +262,7 @@ class ViewsTensorContainer():
 
         for views_tensor in self.ViewsTensors:
             tensor = views_tensor.tensor
-            if tensor.dtype in [defaults.float_type, ]:
+            if tensor.dtype in defaults.allowed_float_types:
                 return views_tensor
         else:
             return None
@@ -277,7 +277,7 @@ class ViewsTensorContainer():
 
         for views_tensor in self.ViewsTensors:
             tensor = views_tensor.tensor
-            if tensor.dtype in [defaults.float_type, ]:
+            if tensor.dtype in defaults.allowed_float_types:
                 return tensor
         else:
             return None

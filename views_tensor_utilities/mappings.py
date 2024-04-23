@@ -516,7 +516,7 @@ def time_space_to_panel_unstrided(tensor, index, columns):
 
     dtype = tensor.dtype
 
-    dne = defaults.fdne if dtype == np.float64 else len(max(tensor, key=len))*'-'
+    dne = defaults.fdne if dtype in defaults.allowed_float_types else len(max(tensor, key=len))*'-'
 
     time_space = TimeSpaceIndices.from_pandas(index)
 
