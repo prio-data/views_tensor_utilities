@@ -363,6 +363,8 @@ def __get_dtype(df):
     __check_default_dtypes()
     if dtype in defaults.allowed_float_types:
         return defaults.float_type
+    elif dtype in defaults.allowed_int_types:
+        return defaults.float_type
     else:
         return defaults.string_type
 
