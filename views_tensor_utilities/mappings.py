@@ -328,6 +328,8 @@ def get_dne(df):
 
     if dtype in defaults.allowed_float_types:
         return defaults.fdne
+    elif dtype in defaults.allowed_int_types:
+        return defaults.fdne
     else:
         max_str_length = -1
         for column in df.columns:
@@ -347,6 +349,8 @@ def get_missing(df):
     dtype = __check_df_data_types(df)
 
     if dtype in defaults.allowed_float_types:
+        return defaults.fmissing
+    elif dtype in defaults.allowed_int_types:
         return defaults.fmissing
     else:
         return defaults.smissing
