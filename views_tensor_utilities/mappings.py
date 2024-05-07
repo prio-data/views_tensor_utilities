@@ -452,7 +452,7 @@ def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None, override_dne=None, 
     if df[df == dne].sum().sum() > 0:
         raise RuntimeError(f'does-not-exist token {dne} found in input data')
 
-    if dtype in defaults.allowed_float_types:
+    if dtype in defaults.allowed_float_types+defaults.allowed_int_types:
         tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne, dtype=dtype)
     else:
         tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne)
