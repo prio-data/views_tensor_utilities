@@ -23,12 +23,8 @@ class TimeUnits():
 
     @classmethod
     def from_pandas(cls, pandas_object):
-        if isinstance(pandas_object, pd.DataFrame):
-            index = pandas_object.index
-        elif isinstance(pandas_object, pd.MultiIndex):
-            index = pandas_object
-        else:
-            raise RuntimeError(f'Input is not a df or a df index')
+
+        index = get_index(pandas_object)
 
         # get unique times
 
@@ -66,12 +62,8 @@ class SpaceUnits():
 
     @classmethod
     def from_pandas(cls, pandas_object):
-        if isinstance(pandas_object, pd.DataFrame):
-            index = pandas_object.index
-        elif isinstance(pandas_object, pd.MultiIndex):
-            index = pandas_object
-        else:
-            raise RuntimeError(f'Input is not a df or a df index')
+
+        index = get_index(pandas_object)
 
         spaces = np.array(list({idx[1] for idx in index.values}))
 
@@ -130,12 +122,7 @@ class LonglatUnits():
 
         """
 
-        if isinstance(pandas_object, pd.DataFrame):
-            index = pandas_object.index
-        elif isinstance(pandas_object, pd.MultiIndex):
-            index = pandas_object
-        else:
-            raise RuntimeError(f'Input is not a df or a df index')
+        index = get_index(pandas_object)
 
         pgids = np.array(list({idx[1] for idx in index.values}))
         pgids = np.sort(pgids)
@@ -233,12 +220,7 @@ class TimeSpaceIndices():
 
         """
 
-        if isinstance(pandas_object, pd.DataFrame):
-            index = pandas_object.index
-        elif isinstance(pandas_object, pd.MultiIndex):
-            index = pandas_object
-        else:
-            raise RuntimeError(f'Input is not a df or a df index')
+        index = get_index(pandas_object)
 
         time_indices = index.levels[0].to_list()
         space_indices = index.levels[1].to_list()
@@ -268,6 +250,28 @@ def is_strideable(pandas_object):
         return True
     else:
         return False
+
+
+def get_index(pandas_object):
+
+    """
+    get_index
+
+    Given either a df or a df index, return the index
+
+    :param pandas_object:
+    :return: index
+
+    """
+
+    if isinstance(pandas_object, pd.DataFrame):
+        index = pandas_object.index
+    elif isinstance(pandas_object, pd.MultiIndex):
+        index = pandas_object
+    else:
+        raise RuntimeError(f'Input is not a df or a df index')
+
+    return index
 
 
 def __check_df_data_types(df):
@@ -388,8 +392,8 @@ def df_to_numpy_time_space_strided(df, cast_to_dtype=None, override_dne=None, ov
         __check_cast_to_dtypes(cast_to_dtype)
         dtype = cast_to_dtype
 
-    if override_dne is not None:
-        raise RuntimeError(f'no dne tokens to override in strideable dataframe')
+#    if override_dne is not None:
+#        raise RuntimeError(f'no dne tokens to override in strideable dataframe')
 
     # get shape of dataframe
 
