@@ -74,8 +74,9 @@ class ViewsDataframe():
 
         nsplit_columns = 0
         for split in defaults.splits:
-            
-            self.split_dfs.append(self.df.select_dtypes(include=[split]).apply(pd.to_numeric, errors='ignore'))
+            split_df = self.df.select_dtypes(include=[split])
+            split_df = split_df.apply(pd.to_numeric, errors='ignore')
+            self.split_dfs.append(split_df)
 
             nsplit_columns += len(self.split_dfs[-1].columns)
 
