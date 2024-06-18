@@ -407,7 +407,7 @@ def df_to_numpy_time_space_strided(df, cast_to_dtype=None, override_dne=None, ov
         raise Exception("df cannot be cast to a tensor - dim0 * dim1 != df.shape[0]",
                         dim0, dim1, df.shape[0])
 
-    flat = df.to_numpy()
+    flat = df.to_numpy().astype(dtype)
 
     # get strides (in bytes) of flat array
     flat_strides = flat.strides
@@ -426,7 +426,7 @@ def df_to_numpy_time_space_strided(df, cast_to_dtype=None, override_dne=None, ov
     if override_missing is not None:
         tensor_time_space = np.where(np.isnan(tensor_time_space), override_missing, tensor_time_space)
 
-    return tensor_time_space.astype(dtype)
+    return tensor_time_space
 
 
 def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None, override_dne=None, override_missing=None):
