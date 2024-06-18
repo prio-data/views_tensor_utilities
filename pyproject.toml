@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "views-tensor-utilities"
-version = "0.8.10"
+version = "0.8.11"
 description = "Classes and functions for transforming between VIEWS-compliant dfs and tensors"
 authors = ["jimdale <jimdale@users.noreply.github.com>"]
 readme = "README.md"
