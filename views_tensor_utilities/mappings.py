@@ -303,10 +303,17 @@ def __check_default_dtypes():
 
     """
 
-    if defaults.float_type not in defaults.allowed_dtypes:
-        raise RuntimeError(f'default dtype {defaults.float_type} not in allowed dtypes: {defaults.allowed_dtypes}')
-    if defaults.string_type not in defaults.allowed_dtypes:
-        raise RuntimeError(f'default dtype {defaults.string_type} not in allowed dtypes: {defaults.allowed_dtypes}')
+    if defaults.default_float_type not in defaults.allowed_dtypes:
+        raise RuntimeError(f'default dtype {defaults.default_float_type} '
+                           f'not in allowed dtypes: {defaults.allowed_dtypes}')
+
+    if defaults.default_int_type not in defaults.allowed_dtypes:
+        raise RuntimeError(f'default dtype {defaults.default_int_type} '
+                           f'not in allowed dtypes: {defaults.allowed_dtypes}')
+
+    if defaults.default_string_type not in defaults.allowed_dtypes:
+        raise RuntimeError(f'default dtype {defaults.default_string_type} '
+                           f'not in allowed dtypes: {defaults.allowed_dtypes}')
 
 
 def __check_cast_to_dtypes(dtype):
@@ -331,16 +338,33 @@ def get_dne(df):
     dtype = __check_df_data_types(df)
 
     if dtype in defaults.allowed_float_types:
-        return defaults.fdne
+        return defaults.float_dne
     elif dtype in defaults.allowed_int_types:
-        return defaults.fdne
+        return defaults.int_dne
     else:
-        max_str_length = -1
+        max_str_length = 1
         for column in df.columns:
             if df[column].dtype in defaults.allowed_string_types:
-                max_str_length = np.max([max_str_length, len(max(df[column].values, key=len))])
+                try:
+                    max_str_length = np.max([max_str_length, len(max(df[column].values, key=len))])
+                except:
+                    pass
 
-        return max_str_length*defaults.sdne
+        return max_str_length*defaults.string_dne
+
+
+def __get_tensor_dne(tensor):
+
+    dtype = tensor.dtype
+
+    if dtype in defaults.allowed_float_types:
+        return defaults.float_dne
+    elif dtype in defaults.allowed_int_types:
+        return defaults.int_dne
+    else:
+        max_str_length = len(max(tensor, key=len))
+
+        return max_str_length * defaults.string_dne
 
 
 def get_missing(df):
@@ -353,11 +377,11 @@ def get_missing(df):
     dtype = __check_df_data_types(df)
 
     if dtype in defaults.allowed_float_types:
-        return defaults.fmissing
+        return defaults.float_missing
     elif dtype in defaults.allowed_int_types:
-        return defaults.fmissing
+        return defaults.int_missing
     else:
-        return defaults.smissing
+        return defaults.string_missing
 
 
 def __get_dtype(df):
@@ -369,15 +393,16 @@ def __get_dtype(df):
 
     dtype = __check_df_data_types(df)
     __check_default_dtypes()
+
     if dtype in defaults.allowed_float_types:
-        return defaults.float_type
+        return defaults.default_float_type
     elif dtype in defaults.allowed_int_types:
-        return defaults.float_type
+        return defaults.default_int_type
     else:
-        return defaults.string_type
+        return defaults.default_string_type
 
 
-def df_to_numpy_time_space_strided(df, cast_to_dtype=None, override_dne=None, override_missing=None):
+def df_to_numpy_time_space_strided(df, override_dne=None, override_missing=None):
 
     """
     df_to_numpy_time_space_strided
@@ -386,14 +411,7 @@ def df_to_numpy_time_space_strided(df, cast_to_dtype=None, override_dne=None, ov
 
     """
 
-    if cast_to_dtype is None:
-        dtype = __get_dtype(df)
-    else:
-        __check_cast_to_dtypes(cast_to_dtype)
-        dtype = cast_to_dtype
-
-#    if override_dne is not None:
-#        raise RuntimeError(f'no dne tokens to override in strideable dataframe')
+    dtype = __get_dtype(df)
 
     # get shape of dataframe
 
@@ -429,7 +447,7 @@ def df_to_numpy_time_space_strided(df, cast_to_dtype=None, override_dne=None, ov
     return tensor_time_space
 
 
-def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None, override_dne=None, override_missing=None):
+def df_to_numpy_time_space_unstrided(df, override_dne=None, override_missing=None):
     """
     df_to_numpy_time_space_unstrided
 
@@ -438,11 +456,7 @@ def df_to_numpy_time_space_unstrided(df, cast_to_dtype=None, override_dne=None, 
 
     """
 
-    if cast_to_dtype is None:
-        dtype = __get_dtype(df)
-    else:
-        __check_cast_to_dtypes(cast_to_dtype)
-        dtype = cast_to_dtype
+    dtype = __get_dtype(df)
 
     if override_dne is None:
         dne = get_dne(df)
@@ -484,7 +498,7 @@ def numpy_time_space_to_longlat(tensor_time_space, pandas_object, override_dne=N
     dtype = tensor_time_space.dtype
 
     if override_dne is None:
-        dne = defaults.fdne if dtype in defaults.allowed_float_types else defaults.sdne
+        dne = __get_tensor_dne(tensor_time_space)
     else:
         dne = override_dne
 
@@ -524,9 +538,11 @@ def time_space_to_panel_unstrided(tensor, index, columns):
     Convert numpy time-space-feature tensor to dataframe without using stride-tricks
     """
 
-    dtype = tensor.dtype
+#    dtype = tensor.dtype
 
-    dne = defaults.fdne if dtype in defaults.allowed_float_types else len(max(tensor, key=len))*'-'
+#    dne = defaults.float_dne if dtype in defaults.allowed_float_types else len(max(tensor, key=len))*'-'
+
+    dne = __get_tensor_dne(tensor)
 
     time_space = TimeSpaceIndices.from_pandas(index)
 
@@ -581,7 +597,7 @@ def merge_numpy_tensors_to_tensor(list_of_numpy_tensors):
     return merged_tensors
 
 
-def merge_views_tensors_to_views_tensor(list_of_views_tensors):
+def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_original=False):
 
     index = list_of_views_tensors[0].index
 
