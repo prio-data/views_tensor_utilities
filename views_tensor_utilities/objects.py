@@ -107,7 +107,7 @@ class ViewsDataframe():
             self.wanted_float_type = np.float32
             self.wanted_int_type = np.int32
         elif self.cast_strategy == 'none':
-            if self.split_strategy is not 'maximal':
+            if self.split_strategy != 'maximal':
                 raise RuntimeError(f'Can only have cast_strategy of none if split_strategy is maximal')
             return
         else:
@@ -242,8 +242,6 @@ class ViewsDataframe():
         Returns: ViewsTensorContainer object containing ViewsTensor objects
 
         """
-
-#        self.__split()
 
         tensors = []
 
@@ -456,7 +454,6 @@ class ViewsTensorContainer():
         get_numeric_numpy_tensors
 
         Get all numeric (float and int) numpy tensors.
-
 
         """
 

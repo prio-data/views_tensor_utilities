@@ -395,11 +395,11 @@ def __get_dtype(df):
     __check_default_dtypes()
 
     if dtype in defaults.allowed_float_types:
-        return defaults.default_float_type
+        return dtype
     elif dtype in defaults.allowed_int_types:
-        return defaults.default_int_type
+        return dtype
     else:
-        return defaults.default_string_type
+        return dtype
 
 
 def df_to_numpy_time_space_strided(df, override_dne=None, override_missing=None):
@@ -537,10 +537,6 @@ def time_space_to_panel_unstrided(tensor, index, columns):
 
     Convert numpy time-space-feature tensor to dataframe without using stride-tricks
     """
-
-#    dtype = tensor.dtype
-
-#    dne = defaults.float_dne if dtype in defaults.allowed_float_types else len(max(tensor, key=len))*'-'
 
     dne = __get_tensor_dne(tensor)
 
