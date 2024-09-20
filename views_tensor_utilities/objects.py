@@ -47,43 +47,190 @@ class ViewsDataframe():
 
     """
 
-    def __init__(self, df, cast_to_dtype=None, override_dne=None, override_missing=None):
+    def __init__(self, df, split_strategy, cast_strategy,
+                 override_float_dne=None, override_float_missing=None,
+                 override_int_dne=None, override_int_missing=None,
+                 override_string_dne=None, override_string_missing=None,):
+
         self.df = df
         self.index = df.index
+        self.columns = df.columns
+        self.dtypes = df.dtypes
+        self.split_strategy = split_strategy
+        self.cast_strategy = cast_strategy
+
+        self.override_float_dne = override_float_dne
+        self.override_float_missing = override_float_missing
+        self.override_int_dne = override_int_dne
+        self.override_int_missing = override_int_missing
+        self.override_string_dne = override_string_dne
+        self.override_string_missing = override_string_missing
+
         self.split_dfs = []
-        self.cast_to_dtype = cast_to_dtype
-        self.override_dne = override_dne
-        self.override_missing = override_missing
+        self.split_df_dtypes = []
+
+        self.wanted_float_type = None
+        self.wanted_int_type = None
 
         if mappings.is_strideable(self.index):
             self.transformer = mappings.df_to_numpy_time_space_strided
         else:
             self.transformer = mappings.df_to_numpy_time_space_unstrided
 
-    def __split_by_dtype(self):
+        self.__split()
+        self.__get_split_df_dtypes()
+
+        self.df = None
+
+    def __check_data_types(self):
+
+        dtypes_set = set(self.df.dtypes)
+
+        for dtype in dtypes_set:
+            if dtype not in defaults.allowed_dtypes:
+                raise RuntimeError(f'Input dtype {dtype} not in set of allowed dtypes')
+
+    def __get_data_type(self):
+
+        dtypes_set = set(self.df.dtypes)
+
+        if len(dtypes_set) != 1:
+            raise RuntimeError(f'df with multiple dtypes passed: {self.df.dtypes}')
+
+        return list(dtypes_set)[0]
+
+    def __set_default_types(self):
+        if self.cast_strategy == 'to_64':
+            self.wanted_float_type = np.float64
+            self.wanted_int_type = np.int64
+        elif self.cast_strategy == 'to_32':
+            self.wanted_float_type = np.float32
+            self.wanted_int_type = np.int32
+        elif self.cast_strategy == 'none':
+            if self.split_strategy != 'maximal':
+                raise RuntimeError(f'Can only have cast_strategy of none if split_strategy is maximal')
+            return
+        else:
+            raise RuntimeError(f'Unknown cast strategy {self.cast_strategy}')
+
+    def __cast(self):
+        """
+        __cast
+
+        Cast columns in loaded df according to cast_strategy:
+
+        'to_64' - cast all floats and ints to 64-bit
+
+        'to_32' - cast all floats and ints to 32-bit
+
+        'none' - leave types as they are
 
         """
-        __split_by_dtype
+
+        self.__check_data_types()
+
+        self.__set_default_types()
+
+        if self.cast_strategy == 'none':
+            return
+
+        for dtype in defaults.allowed_float_types:
+
+            cols = list(self.df.select_dtypes(include=dtype))
+
+            for col in cols:
+                if self.df[col].dtypes != self.wanted_float_type:
+
+                    self.df[col] = self.df[col].astype(self.wanted_float_type)
+
+        for dtype in defaults.allowed_int_types:
+
+            cols = list(self.df.select_dtypes(include=dtype))
+
+            for col in cols:
+                if self.df[col].dtypes != self.wanted_int_type:
+
+                    self.df[col] = self.df[col].astype(self.wanted_int_type)
+
+        return
+
+    def __split(self):
+        """
+        __split
 
         Protected method which splits input data into numeric and string parts as a list of
-        dataframes. An error is thrown if the split fails to capture all the columns in the
+        dataframes, according to the chosen split strategyÖ
+
+        float-string: all numeric data is cast to float form, creating two tensors - float and string
+
+        float-int-string: float and int data are separated into two tensors, with string data in a third
+
+        maximal: every column is stored in its own tensor
+
+        An error is thrown if the split fails to capture all the columns in the
         input dataframe.
+
+        """
+
+        self.__cast()
+
+        match self.split_strategy:
+            case 'float_string':
+                splits = ['number', 'object']
+                targets = [self.wanted_float_type, defaults.default_string_type]
+                self.__split_by_type(splits, targets)
+            case 'float_int_string':
+                splits = [float, int, 'object']
+                targets = [self.wanted_float_type, self.wanted_int_type, defaults.default_string_type]
+                self.__split_by_type(splits, targets)
+            case 'maximal':
+                self.__split_by_column()
+            case _:
+                raise RuntimeError(f'unrecognized split strategy {self.split_strategy}')
+
+    def __split_by_type(self, splits, targets):
+
+        """
+        __split_by_type
+
+        Protected method which splits input data into parts as a list of dataframes. An error is
+        thrown if the split fails to capture all the columns in the input dataframe.
 
         The input dataframe is then destroyed.
         """
 
         nsplit_columns = 0
-        for split in defaults.splits:
-            split_df = self.df.select_dtypes(include=[split])
-            split_df = split_df.apply(pd.to_numeric, errors='ignore')
+
+        for split, target in zip(splits, targets):
+            split_df = self.df.select_dtypes(include=split)
+            try:
+                split_df = split_df.astype(target)
+            except:
+                raise RuntimeError(f'failed to cast {split} to {target}')
+
             self.split_dfs.append(split_df)
 
             nsplit_columns += len(self.split_dfs[-1].columns)
 
         if nsplit_columns != len(self.df.columns):
-            raise RuntimeError(f'Failed to correctly split df by dtype into {defaults.splits}')
+            raise RuntimeError(f'Failed to correctly split df by dtype into {splits}')
 
-        self.df = None
+    def __split_by_column(self):
+
+        for column in self.df.columns:
+            split_df = pd.DataFrame(self.df[column])
+            self.split_dfs.append(split_df)
+
+    def __get_split_df_dtypes(self):
+
+        for split_df in self.split_dfs:
+            split_dtypes = []
+            for split_column in split_df.columns:
+                for icol in range(len(self.df.columns)):
+                    if split_column == self.df.columns[icol]:
+                        split_dtypes.append(self.dtypes[icol])
+
+            self.split_df_dtypes.append(split_dtypes)
 
     def to_numpy_time_space(self, broadcast_index=False):
         """
@@ -96,26 +243,37 @@ class ViewsDataframe():
 
         """
 
-        self.__split_by_dtype()
-
         tensors = []
 
-        for split_df in self.split_dfs:
+        for split_df, split_dtypes in zip(self.split_dfs, self.split_df_dtypes):
 
             if len(split_df.columns) > 0:
 
                 dne = mappings.get_dne(split_df)
                 missing = mappings.get_missing(split_df)
 
+                default_dtype = list(set(split_df.dtypes))[0]
+
+                if default_dtype in defaults.allowed_float_types:
+                    override_dne = self.override_float_dne
+                    override_missing = self.override_float_missing
+                elif default_dtype in defaults.allowed_int_types:
+                    override_dne = self.override_int_dne
+                    override_missing = self.override_int_missing
+                elif default_dtype in defaults.allowed_string_types:
+                    override_dne = self.override_string_dne
+                    override_missing = self.override_string_missing
+                else:
+                    override_dne = override_missing = None
+
                 try:
 
-                    tensor_time_space = self.transformer(split_df, self.cast_to_dtype, self.override_dne,
-                                                         self.override_missing)
-                except:
-                    raise RuntimeError('failed to cast at least one df to tensor')
-#                    tensor_time_space = self.transformer(split_df)
+                    tensor_time_space = self.transformer(split_df, override_dne, override_missing)
 
-                vnt = ViewsNumpy(tensor_time_space, split_df.columns, dne, missing)
+                except:
+                    raise RuntimeError('failed to cast at least one df segment to tensor')
+
+                vnt = ViewsNumpy(tensor_time_space, split_df.columns, split_dtypes, dne, missing)
 
                 if broadcast_index:
                     vnt.index = split_df.index
@@ -197,9 +355,7 @@ class ViewsTensorContainer():
 
         index = list_of_views_tensors[0].index
 
-        dtype_list = [vt.tensor.dtype for vt in list_of_views_tensors]
-
-        dtype_set = set(dtype_list)
+        dtype_set = set([vt.tensor.dtype for vt in list_of_views_tensors])
 
         merged_views_tensors = []
 
@@ -216,13 +372,17 @@ class ViewsTensorContainer():
                     group_missing = vt.missing
 
             merged_tensor = np.concatenate(tensor_group, axis=2)
-            merged_views_tensors.append(ViewsNumpy(merged_tensor, group_columns, group_dne, group_missing))
+            merged_views_tensors.append(ViewsNumpy(merged_tensor,
+                                                   group_columns,
+                                                   dtype,
+                                                   group_dne,
+                                                   group_missing))
 
         tensor_container = cls(tensors=merged_views_tensors, index=index)
 
         return tensor_container
 
-    def to_pandas(self):
+    def to_pandas(self, cast_back=False):
 
         """
         to_pandas
@@ -235,9 +395,9 @@ class ViewsTensorContainer():
         if len(self.ViewsTensors[0].tensor.shape) != 3:
             raise RuntimeError(f'Not possible to cast ViewsTensorContainer to pandas unless D=3')
         else:
-            return self.time_space_to_panel()
+            return self.time_space_to_panel(cast_back)
 
-    def time_space_to_panel(self):
+    def time_space_to_panel(self, cast_back):
 
         """
         space_time_to_panel
@@ -251,67 +411,111 @@ class ViewsTensorContainer():
 
         split_dfs = []
         for views_tensor in self.ViewsTensors:
-            split_dfs.append(self.transformer(views_tensor.tensor, self.index, views_tensor.columns))
+            split_df = self.transformer(views_tensor.tensor, self.index, views_tensor.columns)
+
+            if cast_back:
+                for icolumn, column in enumerate(split_df.columns):
+                    split_df[column] = split_df[column].astype(views_tensor.dtypes[icolumn])
+
+            split_dfs.append(split_df)
 
         return pd.concat(split_dfs, axis=1)
 
-    def get_numeric_part(self):
-        """
-        get_numeric_part
-
-        Get and return the numeric part of the container, if it exists
-
-        """
-
+    def __get_views_tensors_by_type(self, types):
+        views_tensors = []
         for views_tensor in self.ViewsTensors:
             tensor = views_tensor.tensor
-            if tensor.dtype in defaults.allowed_float_types:
-                return views_tensor
-        else:
-            return None
+            if tensor.dtype in types:
+                views_tensors.append(views_tensor)
 
-    def get_numeric_tensor(self):
-        """
-        get_numeric_tensor
+        return views_tensors
 
-        Get and return the numeric tensor from the container, if it exists
-
-        """
-
+    def __get_numpy_tensors_by_type(self, types):
+        numpy_tensors = []
         for views_tensor in self.ViewsTensors:
             tensor = views_tensor.tensor
-            if tensor.dtype in defaults.allowed_float_types:
-                return tensor
-        else:
-            return None
+            if tensor.dtype in types:
+                numpy_tensors.append(tensor)
 
-    def get_string_part(self):
+        return numpy_tensors
+
+    def get_numeric_views_tensors(self):
         """
-        get_string_part
+        get_numeric_views_tensors
 
-        Get and return the string part of the container, if it exists
-
-        """
-        for views_tensor in self.ViewsTensors:
-            tensor = views_tensor.tensor
-            if tensor.dtype in ['str', 'object']:
-                return views_tensor
-        else:
-            return None
-
-    def get_string_tensor(self):
-        """
-        get_string_tensor
-
-        Get and return the string tensor from the container, if it exists
+        Get all numeric (float and int) views tensors.
 
         """
-        for views_tensor in self.ViewsTensors:
-            tensor = views_tensor.tensor
-            if tensor.dtype in ['str', 'object']:
-                return tensor
-        else:
-            return None
+
+        return self.__get_views_tensors_by_type(defaults.allowed_float_types+defaults.allowed_int_types)
+
+    def get_numeric_numpy_tensors(self):
+        """
+        get_numeric_numpy_tensors
+
+        Get all numeric (float and int) numpy tensors.
+
+        """
+
+        return self.__get_numpy_tensors_by_type(defaults.allowed_float_types+defaults.allowed_int_types)
+
+    def get_float_views_tensors(self):
+        """
+        get_float_views_tensors
+
+        Get all float views tensors.
+
+        """
+
+        return self.__get_views_tensors_by_type(defaults.allowed_float_types)
+
+    def get_float_numpy_tensors(self):
+        """
+        get_float_numpy_tensors
+
+        Get all float numpy tensors.
+
+        """
+
+        return self.__get_numpy_tensors_by_type(defaults.allowed_float_types)
+
+    def get_int_views_tensors(self):
+        """
+        get_int_views_tensors
+
+        Get all int views tensors.
+
+        """
+
+        return self.__get_views_tensors_by_type(defaults.allowed_int_types)
+
+    def get_int_numpy_tensors(self):
+        """
+        get_int_numpy_tensors
+
+        Get all int numpy tensors.
+
+        """
+
+        return self.__get_numpy_tensors_by_type(defaults.allowed_int_types)
+
+    def get_string_views_tensors(self):
+        """
+        get_string_views_tensors
+
+        Get all string views tensors.
+
+        """
+        return self.__get_views_tensors_by_type(defaults.allowed_string_types)
+
+    def get_string_numpy_tensors(self):
+        """
+        get_string_numpy_tensors
+
+        Get all string numpy tensors.
+
+        """
+        return self.__get_numpy_tensors_by_type(defaults.allowed_string_types)
 
 
 class ViewsNumpy():
@@ -324,16 +528,19 @@ class ViewsNumpy():
     - a single tensor
     - a list of columns detailing what the features stored in the tensor's last (i.e. 3rd or 4th
       dimension) represent
+    - a list containing the columns' original dtypes, allowing them to be cast back if required
     - a dne token indicating what value in the tensor represents units-of-analysis which do not exist
       (e.g. countries that do not exist in a particular month)
     - a missing token indicating what value in then tensor represents units-of-analysis which do
       exist but have no defined value
+    - (optionally) the index of the dataframe from which the tensor was built
 
     """
 
-    def __init__(self, tensor, columns, dne, missing):
+    def __init__(self, tensor, columns, dtypes, dne, missing):
         self.tensor = tensor
         self.columns = columns
+        self.dtypes = dtypes
         self.dne = dne
         self.missing = missing
         self.index = None
