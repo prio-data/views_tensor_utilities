@@ -9,13 +9,32 @@ class ViewsDataframe():
     """
     ViewsDataframe
 
-    Wrapper class for pandas dataframe which exposes methods to cast panel data into
+    Wrapper class for pandas dataframe which splits the input dataframe into numerical and string component
+    dataframes and exposes methods to transform the panel data in the component dataframes into either
 
     - 3D time-space-feature numpy tensors for regression-type models
 
     - 4D longitude-latitude-time-feature numpy tensors for neural-net-type models, or visualisation
 
-    Two alternative casting methods are employed:
+    Imported data may be cast to different data-types as required in order to optimise resources used while
+    processing. How casting is done is set by a cast strategy which may be
+
+    - to_64: all float data will be cast to np.float64, all int data will be cast to np.int64
+    - to_32: all float data will be cast to np.float32, all int data will be cast to np.int32
+    - none: all data retains its original dtype (only possible of data is split into individual columns)
+
+    The dataframe may be split according to datatype using one of three split strategies:
+
+    - float_string: all numeric data will be cast to floats with the float type controlled by the cast_strategy,
+      numeric data will be separated from string data, so that a maximum of two tensors are created
+    - float_int_string: separate tensors are created to hold int and float data, with the int and float types
+      being controlled by the cast strategy, and a separate tensor created for string data, so that a maximum of
+      three tensors is created
+    - maximal: all columns of the input df are stored in separate tensors. If the cast strategy is none, these
+      retain the types of the input columns, otherwise numerical data will be cast to the int or float types
+      controlled by the cast strategy
+
+    Two alternative transformation df-->tensor methods are employed:
 
     - for trivially tensorisable data (where for every feature, every space unit is present at
       every time unit, e.g. pgm data) numpy stride-tricks is used, which is very fast as it uses
@@ -31,9 +50,19 @@ class ViewsDataframe():
       message if the does-not-exist token is actually present in the data.
 
     Methods:
-        __split_by_dtype: Numeric and string data cannot be mixed in the same numpy tensor.
-                          This method is used to break the data from the input dataframe up
-                          into numeric and string parts.
+        __check_dtypes: check datatypes in input df can be handled correctly
+
+        __set_default_types: set required types based on cast strategy
+
+        __cast: do casting as required
+
+        __split: split the input df into multiple dfs according to split strategy
+
+        __split_by_type: split the input df by the dtypes of its columns
+
+        __split_by_column: split the input df into one df per column
+
+        __get_split_dftypes: generate list recording the types of all the split dfs
 
         to_numpy_time_space: splits dataframe data into numeric and string parts and casts to
                              numpy time-space-feature feature tensors. The tensors are returned as
@@ -84,22 +113,32 @@ class ViewsDataframe():
 
     def __check_data_types(self):
 
+        """
+        Check that all dtypes in the input df are in the allowed types
+
+        """
+
         dtypes_set = set(self.df.dtypes)
 
         for dtype in dtypes_set:
             if dtype not in defaults.allowed_dtypes:
                 raise RuntimeError(f'Input dtype {dtype} not in set of allowed dtypes')
 
-    def __get_data_type(self):
+ #   def __get_data_type(self):
 
-        dtypes_set = set(self.df.dtypes)
+#        dtypes_set = set(self.df.dtypes)
 
-        if len(dtypes_set) != 1:
-            raise RuntimeError(f'df with multiple dtypes passed: {self.df.dtypes}')
+#        if len(dtypes_set) != 1:
+#            raise RuntimeError(f'df with multiple dtypes passed: {self.df.dtypes}')
 
-        return list(dtypes_set)[0]
+ #       return list(dtypes_set)[0]
 
     def __set_default_types(self):
+
+        """
+        Set required dtypes based on cast strategy
+        """
+
         if self.cast_strategy == 'to_64':
             self.wanted_float_type = np.float64
             self.wanted_int_type = np.int64
@@ -239,6 +278,9 @@ class ViewsDataframe():
         Method which splits input dataframe into numeric and string dataframes then casts the
         dataframes to time-space-feature tensors.
 
+        broadcast_index=True causes the index of the original df to be be saved in all the individual
+        ViewsTensor objects
+
         Returns: ViewsTensorContainer object containing ViewsTensor objects
 
         """
@@ -328,16 +370,30 @@ class ViewsTensorContainer():
     Wrapper class used to represent a multi-column pandas dataframe. The dataframe's data is represented
     by
 
-    - a list of one or two ViewsTensor objects containing a numeric and/or a string tensor
+    - a list of ViewsTensor objects each of which has a single datatyoe
 
     - the original index of the input dataframe (required if the dataframe needs to be reconstructed)
 
     Methods:
 
+        get_numeric_views_tensors: extract a list of numeric (flot or int) ViewsTensors
+
+        get_numeric_numpy_tensors: extract a list of numeric (flot or int) numpy arrays
+
+        get_float_xxx_tensors: as above, but returns float tensors only
+
+        get_int_xxx_tensors: as above, but returns int tensors only
+
+        get_string_xxx_tensors: as above, but returns string tensors only
+
+        from_views_numpy_list: creates a new ViewsTensorContainer from a list of ViewsTensor objects, merging on dtype
+        where possible
+
         to_pandas: if tensor container contains 3D tensors, casts split tensors back to dataframes
         and recombines to a single dataframe. If 4D tensors are wrapped, returns an error.
+        The cast_back flag can be set to True to cast all columsn back to their original dtypes from the inoput df.
 
-        space_time_to_panel: casts 3D split tensors back to a single dataframe
+        space_time_to_panel: performs the transformation of 3D tensors back to dataframes
 
     """
 
