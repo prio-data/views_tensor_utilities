@@ -595,7 +595,11 @@ def merge_numpy_tensors_to_tensor(list_of_numpy_tensors):
 
 def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_original=False):
 
-    index = list_of_views_tensors[0].index
+    for itensor in range(len(list_of_views_tensors)):
+        tensor_i_index_list = list_of_views_tensors[itensor].index.tolist()
+        for jtensor in range(itensor, len(list_of_views_tensors)):
+            if list_of_views_tensors[jtensor].index.tolist() != tensor_i_index_list:
+                raise RuntimeError(f'cannot merge tensors whose indexes differ')
 
     dtype_list = [vt.tensor.dtype for vt in list_of_views_tensors]
 
@@ -604,17 +608,31 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
     if len(dtype_set) != 1:
         raise RuntimeError(f'cannot merge tensors with different dtypes: {dtype_set}')
 
+    dne_list = [vt.tensor.dne for vt in list_of_views_tensors]
+
+    dne_set = set(dne_list)
+
+    if len(dne_set) != 1:
+        raise RuntimeError(f'cannot merge tensors with different dnes: {dne_set}')
+
+    missing_list = [vt.tensor.missing for vt in list_of_views_tensors]
+
+    missing_set = set(missing_list)
+
+    if len(missing_set) != 1:
+        raise RuntimeError(f'cannot merge tensors with different missingness tokens: {missing_set}')
+
     merged_columns = []
-    merged_dne = None
-    merged_missing = None
+    merged_index = list_of_views_tensors[0].index
+    merged_dtype = dtype_list[0]
+    merged_dne = dne_list[0]
+    merged_missing = missing_list[0]
     for vt in list_of_views_tensors:
         merged_columns += vt.columns
-        merged_dne = vt.dne
-        merged_missing = vt.missing
 
     merged_tensor = np.concatenate([vt.tensor for vt in list_of_views_tensors], axis=2)
 
-    views_tensor = objects.ViewsNumpy(merged_tensor, merged_columns, dtype_list[0], merged_dne, merged_missing)
-    views_tensor.index = index
+    views_tensor = objects.ViewsNumpy(merged_tensor, merged_columns, merged_dtype, merged_dne, merged_missing)
+    views_tensor.index = merged_index
 
     return views_tensor
