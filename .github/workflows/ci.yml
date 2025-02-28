@@ -23,4 +23,4 @@ jobs:
 
          - name: "Publish"
            run: |
-              twine upload dist/* --username ${{ secrets.PYPI_LOGIN }} --skip-existing --password ${{ secrets.PYPI_PASSWD }}
+              twine upload dist/* --username ${{ secrets.PYPI_USER }} --skip-existing --password ${{ secrets.PYPI_PASSWD }}
