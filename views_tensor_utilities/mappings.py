@@ -614,7 +614,7 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
 
     merged_tensor = np.concatenate([vt.tensor for vt in list_of_views_tensors], axis=2)
 
-    views_tensor = objects.ViewsNumpy(merged_tensor, merged_columns, merged_dne, merged_missing)
+    views_tensor = objects.ViewsNumpy(merged_tensor, merged_columns, dtype_list[0], merged_dne, merged_missing)
     views_tensor.index = index
 
     return views_tensor
