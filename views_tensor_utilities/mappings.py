@@ -601,7 +601,7 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
             if list_of_views_tensors[jtensor].index.tolist() != tensor_i_index_list:
                 raise RuntimeError(f'cannot merge tensors whose indexes differ')
 
-    dtype_list = [vt.dtype for vt in list_of_views_tensors]
+    dtype_list = [dt for vt in list_of_views_tensors for dt in vt.dtypes]
 
     dtype_set = set(dtype_list)
 
