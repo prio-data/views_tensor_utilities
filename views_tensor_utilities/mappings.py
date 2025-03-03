@@ -601,7 +601,7 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
             if list_of_views_tensors[jtensor].index.tolist() != tensor_i_index_list:
                 raise RuntimeError(f'cannot merge tensors whose indexes differ')
 
-    dtype_list = [dt for vt in list_of_views_tensors for dt in vt.dtypes]
+    dtype_list = [vt.tensor.dtype for vt in list_of_views_tensors]
 
     dtype_set = set(dtype_list)
 
@@ -613,14 +613,16 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
     dne_set = set(dne_list)
 
     if len(dne_set) != 1:
-        raise RuntimeError(f'cannot merge tensors with different dnes: {dne_set}')
+        if not np.isnan(dtype_list).all():
+            raise RuntimeError(f'cannot merge tensors with different dnes: {dne_set}')
 
     missing_list = [vt.missing for vt in list_of_views_tensors]
 
     missing_set = set(missing_list)
 
     if len(missing_set) != 1:
-        raise RuntimeError(f'cannot merge tensors with different missingness tokens: {missing_set}')
+        if not np.isnan(dtype_list).all():
+            raise RuntimeError(f'cannot merge tensors with different missingness tokens: {missing_set}')
 
     merged_columns = []
     merged_index = list_of_views_tensors[0].index
