@@ -613,7 +613,7 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
     dne_set = set(dne_list)
 
     if len(dne_set) != 1:
-        if not np.isnan(dtype_list).all():
+        if not np.isnan(dne_list).all():
             raise RuntimeError(f'cannot merge tensors with different dnes: {dne_set}')
 
     missing_list = [vt.missing for vt in list_of_views_tensors]
@@ -621,7 +621,7 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
     missing_set = set(missing_list)
 
     if len(missing_set) != 1:
-        if not np.isnan(dtype_list).all():
+        if not np.isnan(missing_list).all():
             raise RuntimeError(f'cannot merge tensors with different missingness tokens: {missing_set}')
 
     merged_columns = []
