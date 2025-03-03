@@ -11,16 +11,12 @@ jobs:
 
          - uses: actions/setup-python@v2
            with:
-              python-version: "3.8"
+              python-version: "3.11"
               architecture: "x64"
 
          - name: "Dependencies"
            run: |
               pip install poetry twine
 
-         - name: "Build"
-           run: poetry build 
-
          - name: "Publish"
-           run: |
-              twine upload dist/* --username __token__ --skip-existing --password ${{ secrets.PYPI_API_TOKEN }}
+           run: poetry publish --build --username __token__ --password ${{ secrets.PYPI_TOKEN }}
