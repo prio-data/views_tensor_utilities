@@ -679,8 +679,8 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_to=None, cas
     merged_dne = dne_list[0]
     merged_missing = missing_list[0]
     for vt in list_of_views_tensors:
-        merged_columns += vt.columns
-        merged_dtypes += vt.dtypes
+        merged_columns.extend(vt.columns)
+        merged_dtypes.extend(vt.dtypes)
 
     merged_tensor = np.concatenate([vt.tensor for vt in list_of_views_tensors], axis=2)
 
