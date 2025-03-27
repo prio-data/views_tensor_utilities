@@ -596,6 +596,10 @@ class ViewsNumpy():
     """
 
     def __init__(self, tensor, columns, dtypes, dne, missing):
+
+        if type(columns) is not list:columns = [columns,]
+        if type(dtypes) is not list:dtypes = [dtypes, ]
+
         self.tensor = tensor
         self.columns = columns
         self.dtypes = dtypes
