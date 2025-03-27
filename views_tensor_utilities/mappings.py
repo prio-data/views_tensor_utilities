@@ -611,8 +611,6 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_to=None, cas
 
     dtype_set = set(dtype_list)
 
-#    print(dtype_list)
-
     if len(dtype_set) != 1:
         if cast_to is None:
             raise RuntimeError(f'cannot merge tensors with different dtypes: {dtype_set}')
@@ -678,6 +676,7 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_to=None, cas
     merged_dtypes = []
     merged_dne = dne_list[0]
     merged_missing = missing_list[0]
+
     for vt in list_of_views_tensors:
         merged_columns.extend(vt.columns)
         merged_dtypes.extend(vt.dtypes)
