@@ -124,14 +124,6 @@ class ViewsDataframe():
             if dtype not in defaults.allowed_dtypes:
                 raise RuntimeError(f'Input dtype {dtype} not in set of allowed dtypes')
 
- #   def __get_data_type(self):
-
-#        dtypes_set = set(self.df.dtypes)
-
-#        if len(dtypes_set) != 1:
-#            raise RuntimeError(f'df with multiple dtypes passed: {self.df.dtypes}')
-
- #       return list(dtypes_set)[0]
 
     def __set_default_types(self):
 
@@ -266,8 +258,8 @@ class ViewsDataframe():
             split_dtypes = []
             for split_column in split_df.columns:
                 for icol in range(len(self.df.columns)):
-                    if split_column == self.df.columns[icol]:
-                        split_dtypes.append(self.dtypes[icol])
+                    if split_column == list(self.df.columns)[icol]:
+                        split_dtypes.append(list(self.dtypes)[icol])
 
             self.split_df_dtypes.append(split_dtypes)
 
@@ -278,7 +270,7 @@ class ViewsDataframe():
         Method which splits input dataframe into numeric and string dataframes then casts the
         dataframes to time-space-feature tensors.
 
-        broadcast_index=True causes the index of the original df to be be saved in all the individual
+        broadcast_index=True causes the index of the original df to be saved in all the individual
         ViewsTensor objects
 
         Returns: ViewsTensorContainer object containing ViewsTensor objects
@@ -409,6 +401,12 @@ class ViewsTensorContainer():
     @classmethod
     def from_views_numpy_list(cls, list_of_views_tensors):
 
+        for itensor in range(len(list_of_views_tensors)):
+            tensor_i_index_list = list_of_views_tensors[itensor].index.tolist()
+            for jtensor in range(itensor, len(list_of_views_tensors)):
+                if list_of_views_tensors[jtensor].index.tolist() != tensor_i_index_list:
+                    raise RuntimeError(f'cannot merge tensors whose indexes differ')
+
         index = list_of_views_tensors[0].index
 
         dtype_set = set([vt.tensor.dtype for vt in list_of_views_tensors])
@@ -418,19 +416,23 @@ class ViewsTensorContainer():
         for dtype in dtype_set:
             tensor_group = []
             group_columns = []
+            group_dtypes = []
             group_dne = None
             group_missing = None
             for vt in list_of_views_tensors:
                 if vt.tensor.dtype == dtype:
                     tensor_group.append(vt.tensor)
-                    group_columns.append(vt.columns)
+                    group_columns += vt.columns
+                    group_dtypes += vt.dtypes
                     group_dne = vt.dne
                     group_missing = vt.missing
+
+#                    check dne and missing
 
             merged_tensor = np.concatenate(tensor_group, axis=2)
             merged_views_tensors.append(ViewsNumpy(merged_tensor,
                                                    group_columns,
-                                                   dtype,
+                                                   group_dtypes,
                                                    group_dne,
                                                    group_missing))
 

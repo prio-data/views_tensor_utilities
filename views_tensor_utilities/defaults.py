@@ -3,12 +3,12 @@ import numpy as np
 pg_stride = 720
 
 default_float_type = np.float32
-float_missing = np.nan
+float_missing = np.float32(np.nan)
 float_dne = -np.inf
 
 default_int_type = np.int32
-int_missing = -2147483647
-int_dne = -2147483648
+int_missing = -2147483648
+int_dne = -2147483647
 
 default_string_type = np.str_
 string_missing = 'null'

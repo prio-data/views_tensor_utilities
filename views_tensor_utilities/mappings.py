@@ -285,7 +285,7 @@ def __check_df_data_types(df):
     dtypes_set = set(df.dtypes)
 
     if len(dtypes_set) != 1:
-        raise RuntimeError(f'df with multiple dtypes passed: {df.dtypes}')
+        raise RuntimeError(f'df with multiple dtypes passed: {list(df.dtypes)}')
 
     dtype = list(dtypes_set)[0]
 
@@ -346,7 +346,7 @@ def get_dne(df):
         for column in df.columns:
             if df[column].dtype in defaults.allowed_string_types:
                 try:
-                    max_str_length = np.max([max_str_length, len(max(df[column].values, key=len))])
+                    max_str_length = np.max([max_str_length, len(max(np.ndarray.flatten(df[column].values), key=len))])
                 except:
                     pass
 
@@ -362,8 +362,7 @@ def __get_tensor_dne(tensor):
     elif dtype in defaults.allowed_int_types:
         return defaults.int_dne
     else:
-        max_str_length = len(max(tensor, key=len))
-
+        max_str_length = len(max(np.ndarray.flatten(tensor), key=len))
         return max_str_length * defaults.string_dne
 
 
@@ -412,6 +411,15 @@ def df_to_numpy_time_space_strided(df, override_dne=None, override_missing=None)
     """
 
     dtype = __get_dtype(df)
+
+    if override_dne is None:
+        dne = get_dne(df)
+    else:
+        dne = override_dne
+
+    for column in df.columns:
+        if dne in df[column].values:
+            raise RuntimeError(f'does-not-exist token {dne} found in input column {column}')
 
     # get shape of dataframe
 
@@ -467,8 +475,9 @@ def df_to_numpy_time_space_unstrided(df, override_dne=None, override_missing=Non
 
     nfeature = len(df.columns)
 
-    if df[df == dne].sum().sum() > 0:
-        raise RuntimeError(f'does-not-exist token {dne} found in input data')
+    for column in df.columns:
+        if dne in df[column].values:
+            raise RuntimeError(f'does-not-exist token {dne} found in input column {column}')
 
     if dtype in defaults.allowed_float_types+defaults.allowed_int_types:
         tensor_time_space = np.full((time_space.ntime, time_space.nspace, nfeature), dne, dtype=dtype)
@@ -578,22 +587,19 @@ def time_space_to_panel_strided(tensor, index, columns):
     return pd.DataFrame(flat, index=index, columns=columns)
 
 
-def merge_numpy_tensors_to_tensor(list_of_numpy_tensors):
+def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_to=None, cast_to_dne=None, cast_to_missing=None):
 
-    dtype_list = [tensor.dtype for tensor in list_of_numpy_tensors]
+    """
+    merge_views_tensors_to_views_tensor
 
-    dtype_set = set(dtype_list)
+    Merge list of views tensors by type to produce a single views tensor
 
-    merged_tensors = []
-
-    for dtype in dtype_set:
-        tensor_group = [tensor for tensor in list_of_numpy_tensors if tensor.dtype == dtype]
-        merged_tensors.append(np.stack(tensor_group, axis=2))
-
-    return merged_tensors
-
-
-def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_original=False):
+    :param list_of_views_tensors: list of ViewsTensor objects
+    :param cast_to: dtype to cast ViewsTensor.tensor to
+    :param cast_to_dne: dne token to use in casted tensor
+    :param cast_to_missing: missing tokent o use in casted tensor
+    :return: single views tensor
+    """
 
     for itensor in range(len(list_of_views_tensors)):
         tensor_i_index_list = list_of_views_tensors[itensor].index.tolist()
@@ -605,8 +611,51 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
 
     dtype_set = set(dtype_list)
 
+#    print(dtype_list)
+
     if len(dtype_set) != 1:
-        raise RuntimeError(f'cannot merge tensors with different dtypes: {dtype_set}')
+        if cast_to is None:
+            raise RuntimeError(f'cannot merge tensors with different dtypes: {dtype_set}')
+        else:
+            casted_tensors = []
+            for vt in list_of_views_tensors:
+                if vt.tensor.dtype is np.dtype(cast_to):
+                    casted_tensors.append(vt)
+                else:
+                    try:
+                        from_dne = vt.dne
+                        from_missing = vt.missing
+
+                        casted_tensor = np.empty_like(vt.tensor, dtype=cast_to)
+
+                        if np.isnan(from_dne):
+                           dne_mask = np.isnan(vt.tensor)
+                        else:
+                           dne_mask = vt.tensor == from_dne
+
+                        if np.isnan(from_missing):
+                            missing_mask = np.isnan(vt.tensor)
+                        else:
+                            missing_mask = vt.tensor == from_missing
+
+                        values_mask = np.logical_not(np.logical_or(dne_mask, missing_mask))
+
+                        casted_tensor[values_mask] = vt.tensor[values_mask]
+                        casted_tensor[dne_mask] = cast_to_dne
+                        casted_tensor[missing_mask] = cast_to_missing
+
+                        casted_views_tensor = objects.ViewsNumpy(casted_tensor, vt.columns, vt.dtypes, cast_to_dne,
+                                                                 cast_to_missing)
+
+                        casted_tensors.append(casted_views_tensor)
+                    except:
+                        raise RuntimeError(f'tensor with type {vt.tensor.dtype}, dne {from_dne} could not be cast to '
+                                           f'{cast_to}')
+
+    else:
+        casted_tensors = list_of_views_tensors
+
+    list_of_views_tensors = casted_tensors
 
     dne_list = [vt.dne for vt in list_of_views_tensors]
 
@@ -626,15 +675,16 @@ def merge_views_tensors_to_views_tensor(list_of_views_tensors, cast_back_to_orig
 
     merged_columns = []
     merged_index = list_of_views_tensors[0].index
-    merged_dtype = dtype_list[0]
+    merged_dtypes = []
     merged_dne = dne_list[0]
     merged_missing = missing_list[0]
     for vt in list_of_views_tensors:
         merged_columns += vt.columns
+        merged_dtypes += vt.dtypes
 
     merged_tensor = np.concatenate([vt.tensor for vt in list_of_views_tensors], axis=2)
 
-    views_tensor = objects.ViewsNumpy(merged_tensor, merged_columns, merged_dtype, merged_dne, merged_missing)
+    views_tensor = objects.ViewsNumpy(merged_tensor, merged_columns, merged_dtypes, merged_dne, merged_missing)
     views_tensor.index = merged_index
 
     return views_tensor
