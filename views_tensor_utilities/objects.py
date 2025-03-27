@@ -422,8 +422,8 @@ class ViewsTensorContainer():
             for vt in list_of_views_tensors:
                 if vt.tensor.dtype == dtype:
                     tensor_group.append(vt.tensor)
-                    group_columns += vt.columns
-                    group_dtypes += vt.dtypes
+                    group_columns.extend(vt.columns)
+                    group_dtypes.extend(vt.dtypes)
                     group_dne = vt.dne
                     group_missing = vt.missing
 
