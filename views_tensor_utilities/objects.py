@@ -597,6 +597,7 @@ class ViewsNumpy():
 
     def __init__(self, tensor, columns, dtypes, dne, missing):
 
+        if isinstance(columns, pd.core.indexes.base.Index): columns = list(columns)
         if type(columns) is not list:columns = [columns,]
         if type(dtypes) is not list:dtypes = [dtypes, ]
 
